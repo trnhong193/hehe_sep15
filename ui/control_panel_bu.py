@@ -14,13 +14,11 @@ class ControlPanel(QWidget):
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(5, 5, 5, 5)
         general_group = self._create_general_group()
-        
         self.tab_widget = QTabWidget()
         objects_tab = self._create_objects_tab()
         self.details_tab = self._create_details_tab()
         self.tab_widget.addTab(objects_tab, "Danh sách đối tượng")
         self.tab_widget.addTab(self.details_tab, "Thuộc tính")
-
         main_layout.addWidget(general_group)
         main_layout.addWidget(self.tab_widget)
 
@@ -61,7 +59,6 @@ class ControlPanel(QWidget):
         self.obstacle_table.horizontalHeader().setStretchLastSection(True)
         obstacle_layout.addWidget(self.obstacle_table)
         obstacle_group.setLayout(obstacle_layout)
-
         layout.addWidget(emp_group)
         layout.addWidget(obstacle_group)
         return tab
@@ -71,6 +68,8 @@ class ControlPanel(QWidget):
         layout = QVBoxLayout(tab)
         self.details_group = QGroupBox("Thuộc tính")
         self.details_layout = QFormLayout()
+        # --- THAY ĐỔI SO VỚI FILE CỦA BẠN ---
+        # Thay thế placeholder bằng QLabel để có hướng dẫn rõ ràng
         self.details_placeholder = QLabel("<i>Chọn một đối tượng từ danh sách để xem thuộc tính,\nhoặc chọn một hành động 'Thêm' để bắt đầu.</i>")
         self.details_placeholder.setAlignment(Qt.AlignCenter)
         self.details_placeholder.setWordWrap(True)
@@ -78,34 +77,40 @@ class ControlPanel(QWidget):
         self.details_group.setLayout(self.details_layout)
         layout.addWidget(self.details_group)
         return tab
-
+    
     def clear_details_form(self):
         old_widget = self.details_layout.itemAt(0).widget()
         if old_widget: old_widget.deleteLater()
+        # --- THAY ĐỔI SO VỚI FILE CỦA BẠN ---
+        # Thêm lại QLabel hướng dẫn khi form được dọn dẹp
         self.details_placeholder = QLabel("<i>Chọn một đối tượng từ danh sách để xem thuộc tính,\nhoặc chọn một hành động 'Thêm' để bắt đầu.</i>")
         self.details_placeholder.setAlignment(Qt.AlignCenter)
         self.details_placeholder.setWordWrap(True)
         self.details_layout.addWidget(self.details_placeholder)
 
     def populate_details_form(self, object_type, data_object=None, read_only=False):
+        """
+        Tạo form nhập liệu hoặc hiển thị.
+        **Thay đổi:** Hàm này giờ sẽ trả về một dictionary chứa các widget input.
+        """
         old_widget = self.details_layout.itemAt(0).widget()
         if old_widget: old_widget.deleteLater()
 
         form_widget = QWidget()
         form_layout = QFormLayout(form_widget)
         
-        # Tạo và lưu trữ các widget input để logic có thể truy cập
+        # Dictionary để lưu các widget input
         self.input_widgets = {}
 
         # Các trường chung
         self.input_widgets["name"] = QLineEdit(data_object.name if data_object else "", readOnly=read_only)
         self.input_widgets["lat"] = QLineEdit(f"{data_object.lat:.6f}" if data_object else "", readOnly=read_only)
         self.input_widgets["lon"] = QLineEdit(f"{data_object.lon:.6f}" if data_object else "", readOnly=read_only)
-
+        
         form_layout.addRow("Tên:", self.input_widgets["name"])
         form_layout.addRow("Vĩ độ (Lat):", self.input_widgets["lat"])
         form_layout.addRow("Kinh độ (Lon):", self.input_widgets["lon"])
-        
+
         # Các trường riêng
         if object_type == "EMP":
             self.details_group.setTitle("Chi tiết nguồn EMP")

@@ -5,6 +5,11 @@ import math
 R_EARTH = 6371000
 
 def lonlat_to_xy(origin_lon, origin_lat, lon, lat):
+    """
+    Chuyển đổi tọa độ (lon, lat) sang (x, y) tính bằng mét,
+    dựa trên một điểm gốc (origin). Dùng phép chiếu Equirectangular.
+    Đây là phép tính gần đúng, hoạt động tốt cho các khu vực cục bộ.
+    """
     dx = (lon - origin_lon) * math.pi / 180 * R_EARTH * math.cos(origin_lat * math.pi / 180)
     dy = (lat - origin_lat) * math.pi / 180 * R_EARTH
     return dx, dy
