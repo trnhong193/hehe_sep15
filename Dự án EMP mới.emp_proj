@@ -1,0 +1,51 @@
+{
+    "file_format_version": "1.0",
+    "saved_at": "2025-09-17T06:08:51.331837",
+    "map_state": {
+        "center": [
+            21.04945902994632,
+            105.82679271698
+        ],
+        "zoom": 16
+    },
+    "emps": [
+        {
+            "name": "emp1",
+            "lat": 21.049819,
+            "lon": 105.820227,
+            "power": 100000.0,
+            "frequency": 300.0,
+            "height": 10.0,
+            "uuid": "fa477fda-8364-4764-ace5-b4034a2af2a6"
+        },
+        {
+            "name": "emp3",
+            "lat": 21.051101,
+            "lon": 105.82278,
+            "power": 20000.0,
+            "frequency": 300.0,
+            "height": 10.0,
+            "uuid": "2575455a-5c19-4fa3-9727-08c700560c0e"
+        }
+    ],
+    "obstacles": [
+        {
+            "name": "obs1",
+            "lat": 21.050721,
+            "lon": 105.821321,
+            "length": 20.0,
+            "width": 10.0,
+            "height": 15.0,
+            "uuid": "b8216398-70f1-43b4-b5ee-c1a80805ec0f"
+        },
+        {
+            "name": "obs2",
+            "lat": 21.048598,
+            "lon": 105.820742,
+            "length": 20.0,
+            "width": 60.0,
+            "height": 15.0,
+            "uuid": "4332d412-c42f-4c40-9a6c-c7d6d4d6d6fc"
+        }
+    ]
+}

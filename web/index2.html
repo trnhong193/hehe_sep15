@@ -9,6 +9,7 @@
     <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
 </head>
 <body>
+    <!--div chứa bản đồ--> 
     <div id="map"></div>
     <script src="leaflet/leaflet.js"></script>
     <script>
@@ -17,35 +18,29 @@
             maxZoom: 16, 
             minZoom: 11, 
             attribution: 'Map data &copy; Local Tiles'
-        }).addTo(map);
+    }).addTo(map);
 
-        var py_bridge = null;
-        var drawnLayers = {};
-        var overlayLayer = null;
+        var py_bridge = null;  // Đối tượng cầu nối với PyQt
+        var drawnLayers = {}; // dict(object) - lưu trữ các đối tượng đã vẽ (key: uuuid, value: marker/rectangle)
+        var overlayLayer = null;  // Lưu lớp ảnh heatmap 
 
+        // Thiết lập kênh giap tiếp với Python qua QWebChannel
         new QWebChannel(qt.webChannelTransport, function (channel) {
             py_bridge = channel.objects.py_bridge;
         });
-        
+        // Xử lý sự kiện click trên bản đồ: gửi tọa độ về PyQt khi người dùng click chuột
         map.on('click', function(e) {
             if (py_bridge) py_bridge.onMapClicked(e.latlng.lat, e.latlng.lng);
         });
         
-        // <<< SỬA ĐỔI >>> Thêm sự kiện chuột phải vào marker
+        // Thêm/ cập nhật marker cho EMP 
         function addEMPMarker(emp) {
-            removeObject(emp.uuid);
+            removeObject(emp.uuid); // xóa marker cũ nếu có để cập nhật 
             var marker = L.marker([emp.lat, emp.lon]).addTo(map);
             marker.bindPopup(`<b>Nguồn EMP: ${emp.name}</b><br>Công suất: ${emp.power} W<br>Độ cao: ${emp.height} m`);
-            
-            // Thêm sự kiện chuột phải
-            marker.on('contextmenu', function(e) {
-                if (py_bridge) py_bridge.onObjectRightClicked(emp.uuid, 'EMP');
-            });
-
             drawnLayers[emp.uuid] = marker;
         }
-
-        // <<< SỬA ĐỔI >>> Thêm sự kiện chuột phải vào hình chữ nhật
+        // Thêm/ cập nhật hcn cho vật cản 
         function addObstacleShape(obs) {
             removeObject(obs.uuid);
             const lat_offset = (obs.width / 2) / 111111;
@@ -53,22 +48,17 @@
             var bounds = [[obs.lat - lat_offset, obs.lon - lon_offset], [obs.lat + lat_offset, obs.lon + lon_offset]];
             var rect = L.rectangle(bounds, {color: "#3388ff", weight: 1}).addTo(map);
             rect.bindPopup(`<b>Vật cản: ${obs.name}</b><br>Kích thước: ${obs.length}x${obs.width}x${obs.height} m`);
-
-            // Thêm sự kiện chuột phải
-            rect.on('contextmenu', function(e) {
-                if (py_bridge) py_bridge.onObjectRightClicked(obs.uuid, 'OBSTACLE');
-            });
-
             drawnLayers[obs.uuid] = rect;
         }
         
+        // Xóa 1 đối tượng cụ thể ra khỏi map
         function removeObject(uuid) {
             if (drawnLayers[uuid]) {
                 map.removeLayer(drawnLayers[uuid]);
                 delete drawnLayers[uuid];
             }
         }
-        
+        // Xóa tất cả các đối tượng và heatmap
         function clearAllObjects() {
             for (var uuid in drawnLayers) {
                 map.removeLayer(drawnLayers[uuid]);
@@ -78,23 +68,27 @@
                 map.removeLayer(overlayLayer);
                 overlayLayer = null;  
             }
+
         }
         
+        // Di chuyển và zoom bản đồ đến 1 vị trí cụ thể
         function setMapView(lat, lon, zoom) {
             map.setView([lat, lon], zoom);
         }
 
+        // Lấy vị trí và mức zoom hiện tại của bản đồ, báo về Python
         function getMapView() {
             if (py_bridge) py_bridge.onMapViewReceived(map.getCenter().lat, map.getCenter().lng, map.getZoom());
         }
 
+        // Cập nhật ảnh heatmap phủ lên bản đồ
         function updateOverlayImage(imageUrl, latMin, lonMin, latMax, lonMax) {
             if (overlayLayer) map.removeLayer(overlayLayer);
-            var imageUrlWithNoCache = imageUrl + '?t=' + new Date().getTime();
+            var imageUrlWithNoCache = imageUrl + '?t=' + new Date().getTime(); // Buộc trình duyệt tải ảnh mới mỗi lần tính toán, thay vì dùng lại ảnh trong cache
             var imageBounds = [[latMin, lonMin], [latMax, lonMax]];
             overlayLayer = L.imageOverlay(imageUrlWithNoCache, imageBounds, { opacity: 0.6, interactive: false }).addTo(map);
         }
-        
+        // Lấy giới hạn vùng bản đồ hiện tại: 4 góc map, báo về Python
         function getMapBounds() {
             if (py_bridge) py_bridge.onMapBoundsReceived(map.getBounds().getSouth(), map.getBounds().getWest(), map.getBounds().getNorth(), map.getBounds().getEast());
         }

@@ -6,30 +6,18 @@ from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QGroupBox, QFormLayout,
 from PyQt5.QtCore import Qt
 
 class ControlPanel(QWidget):
-    """
-    Lớp định nghĩa toàn bộ panel điều khiển bên trái.
-    Nó chứa các widget nhưng logic xử lý sẽ nằm ở ApplicationLogic.
-    """
     def __init__(self, parent=None):
         super().__init__(parent)
         self._setup_ui()
 
     def _setup_ui(self):
-        """Khởi tạo và sắp xếp các thành phần giao diện."""
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(5, 5, 5, 5)
-
-        # 1. Hộp Thiết lập chung
         general_group = self._create_general_group()
-
-        # 2. Cấu trúc Tab chính
-        self.tab_widget = QTabWidget()
         
-        # Tab 1: Danh sách
+        self.tab_widget = QTabWidget()
         objects_tab = self._create_objects_tab()
-        # Tab 2: Thuộc tính
         self.details_tab = self._create_details_tab()
-
         self.tab_widget.addTab(objects_tab, "Danh sách đối tượng")
         self.tab_widget.addTab(self.details_tab, "Thuộc tính")
 
@@ -37,25 +25,19 @@ class ControlPanel(QWidget):
         main_layout.addWidget(self.tab_widget)
 
     def _create_general_group(self):
-        """Tạo group box cho các thiết lập chung."""
         group_box = QGroupBox("Thiết lập chung")
         layout = QFormLayout()
-        
         self.altitude_input = QDoubleSpinBox()
         self.altitude_input.setRange(-1000, 10000)
         self.altitude_input.setValue(5.0)
         self.altitude_input.setSuffix(" m")
-        
         layout.addRow("Độ cao xét ảnh hưởng:", self.altitude_input)
         group_box.setLayout(layout)
         return group_box
 
     def _create_objects_tab(self):
-        """Tạo tab chứa danh sách các bảng EMP và Vật cản."""
         tab = QWidget()
         layout = QVBoxLayout(tab)
-
-        # Bảng EMP
         emp_group = QGroupBox("Danh sách nguồn EMP")
         emp_layout = QVBoxLayout()
         self.emp_table = QTableWidget()
@@ -68,7 +50,6 @@ class ControlPanel(QWidget):
         emp_layout.addWidget(self.emp_table)
         emp_group.setLayout(emp_layout)
         
-        # Bảng Vật cản
         obstacle_group = QGroupBox("Danh sách vật cản")
         obstacle_layout = QVBoxLayout()
         self.obstacle_table = QTableWidget()
@@ -90,80 +71,63 @@ class ControlPanel(QWidget):
         layout = QVBoxLayout(tab)
         self.details_group = QGroupBox("Thuộc tính")
         self.details_layout = QFormLayout()
-        
-        # <<< SỬA ĐỔI >>> Bỏ placeholder mặc định, sẽ được quản lý bởi hàm clear_details_form
+        self.details_placeholder = QLabel("<i>Chọn một đối tượng từ danh sách để xem thuộc tính,\nhoặc chọn một hành động 'Thêm' để bắt đầu.</i>")
+        self.details_placeholder.setAlignment(Qt.AlignCenter)
+        self.details_placeholder.setWordWrap(True)
+        self.details_layout.addWidget(self.details_placeholder)
         self.details_group.setLayout(self.details_layout)
         layout.addWidget(self.details_group)
-        self.clear_details_form() # Gọi hàm để hiển thị placeholder ban đầu
         return tab
-    
-    # <<< SỬA ĐỔI >>> Tối ưu hóa hàm xóa layout
-    def _clear_layout(self, layout):
-        """Xóa tất cả các widget khỏi một layout."""
-        while layout.count():
-            child = layout.takeAt(0)
-            if child.widget():
-                child.widget().deleteLater()
 
     def clear_details_form(self):
-        """Xóa form chi tiết và hiển thị placeholder."""
-        self._clear_layout(self.details_layout) # Xóa sạch layout
-        self.details_group.setTitle("Thuộc tính")
-        placeholder = QLabel("<i>Chọn một đối tượng hoặc một hành động 'Thêm' để bắt đầu.</i>")
-        placeholder.setAlignment(Qt.AlignCenter)
-        placeholder.setWordWrap(True)
-        self.details_layout.addWidget(placeholder)
+        old_widget = self.details_layout.itemAt(0).widget()
+        if old_widget: old_widget.deleteLater()
+        self.details_placeholder = QLabel("<i>Chọn một đối tượng từ danh sách để xem thuộc tính,\nhoặc chọn một hành động 'Thêm' để bắt đầu.</i>")
+        self.details_placeholder.setAlignment(Qt.AlignCenter)
+        self.details_placeholder.setWordWrap(True)
+        self.details_layout.addWidget(self.details_placeholder)
 
     def populate_details_form(self, object_type, data_object=None, read_only=False):
-        """Tạo form nhập liệu hoặc hiển thị thông tin chi tiết."""
-        self._clear_layout(self.details_layout) # <<< SỬA ĐỔI >>> Xóa sạch layout trước khi thêm mới
+        old_widget = self.details_layout.itemAt(0).widget()
+        if old_widget: old_widget.deleteLater()
 
         form_widget = QWidget()
         form_layout = QFormLayout(form_widget)
         
-        fields = {}
-        # Các trường chung
-        fields["name"] = QLineEdit(data_object.name if data_object else "")
-        fields["lat"] = QLineEdit(f"{data_object.lat:.6f}" if data_object else "")
-        fields["lon"] = QLineEdit(f"{data_object.lon:.6f}" if data_object else "")
-        
-        # <<< SỬA ĐỔI >>> Vô hiệu hóa việc sửa lat/lon trực tiếp nếu không phải chế độ thêm
-        if read_only or (data_object is not None):
-             fields["lat"].setReadOnly(True)
-             fields["lon"].setReadOnly(True)
+        # Tạo và lưu trữ các widget input để logic có thể truy cập
+        self.input_widgets = {}
 
+        # Các trường chung
+        self.input_widgets["name"] = QLineEdit(data_object.name if data_object else "", readOnly=read_only)
+        self.input_widgets["lat"] = QLineEdit(f"{data_object.lat:.6f}" if data_object else "", readOnly=read_only)
+        self.input_widgets["lon"] = QLineEdit(f"{data_object.lon:.6f}" if data_object else "", readOnly=read_only)
+
+        form_layout.addRow("Tên:", self.input_widgets["name"])
+        form_layout.addRow("Vĩ độ (Lat):", self.input_widgets["lat"])
+        form_layout.addRow("Kinh độ (Lon):", self.input_widgets["lon"])
+        
         # Các trường riêng
         if object_type == "EMP":
             self.details_group.setTitle("Chi tiết nguồn EMP")
-            fields["power"] = QLineEdit(str(data_object.power) if data_object else "1000")
-            fields["frequency"] = QLineEdit(str(data_object.frequency) if data_object else "300")
-            fields["height"] = QLineEdit(str(data_object.height) if data_object else "10")
+            self.input_widgets["power"] = QLineEdit(str(data_object.power) if data_object else "1000", readOnly=read_only)
+            self.input_widgets["frequency"] = QLineEdit(str(data_object.frequency) if data_object else "300", readOnly=read_only)
+            self.input_widgets["height"] = QLineEdit(str(data_object.height) if data_object else "10", readOnly=read_only)
+            form_layout.addRow("Công suất (W):", self.input_widgets["power"])
+            form_layout.addRow("Tần số (MHz):", self.input_widgets["frequency"])
+            form_layout.addRow("Độ cao lắp đặt (m):", self.input_widgets["height"])
         elif object_type == "OBSTACLE":
             self.details_group.setTitle("Chi tiết vật cản")
-            fields["length"] = QLineEdit(str(data_object.length) if data_object else "20")
-            fields["width"] = QLineEdit(str(data_object.width) if data_object else "10")
-            fields["height"] = QLineEdit(str(data_object.height) if data_object else "15")
+            self.input_widgets["length"] = QLineEdit(str(data_object.length) if data_object else "20", readOnly=read_only)
+            self.input_widgets["width"] = QLineEdit(str(data_object.width) if data_object else "10", readOnly=read_only)
+            self.input_widgets["height"] = QLineEdit(str(data_object.height) if data_object else "15", readOnly=read_only)
+            form_layout.addRow("Chiều dài (m):", self.input_widgets["length"])
+            form_layout.addRow("Chiều rộng (m):", self.input_widgets["width"])
+            form_layout.addRow("Chiều cao (m):", self.input_widgets["height"])
 
-        # Đặt tên đối tượng và thêm vào layout
-        for name, widget in fields.items():
-            widget.setObjectName(f"{name}_input")
-            widget.setReadOnly(read_only) # <<< SỬA ĐỔI >>> Áp dụng cờ read_only cho tất cả
-            
-            # Tạo label
-            label_text = name.replace("_", " ").capitalize()
-            if name == 'lat': label_text = "Vĩ độ (Lat)"
-            elif name == 'lon': label_text = "Kinh độ (Lon)"
-            elif name == 'power': label_text = "Công suất (W)"
-            elif name == 'frequency': label_text = "Tần số (MHz)"
-            elif name in ['height', 'length', 'width']: label_text += " (m)"
-                
-            form_layout.addRow(f"{label_text}:", widget)
-        
         if not read_only:
             self.save_button = QPushButton("Lưu")
             self.cancel_button = QPushButton("Hủy")
             btn_layout = QHBoxLayout()
-            btn_layout.addStretch()
             btn_layout.addWidget(self.save_button)
             btn_layout.addWidget(self.cancel_button)
             form_layout.addRow(btn_layout)
